@@ -1,0 +1,52 @@
+[
+    {
+        "name": "Tyler Dotson",
+        "gender": "male",
+        "address": "220 Herkimer Place, Turpin, Oklahoma, 4468",
+        "age": 20,
+        "books": [
+            {
+                "title": "Outsider, The",
+                "author": "Camus, Albert",
+                "pages": 198,
+                "genre": "fiction"
+            },
+            {
+                "title": "Textbook of Economic Theory",
+                "author": "Stonier, Alfred",
+                "pages": 242,
+                "genre": "economics"
+            },
+            {
+                "title": "Great Indian Novel, The",
+                "author": "Tharoor, Shashi",
+                "pages": 198,
+                "genre": "fiction"
+            },
+            {
+                "title": "History of Western Philosophy",
+                "author": "Russell, Bertrand",
+                "pages": 213,
+                "genre": "philosophy"
+            },
+            {
+                "title": "Flashpoint",
+                "author": "",
+                "pages": 265,
+                "genre": "comic"
+            },
+            {
+                "title": "20000 Leagues Under the Sea",
+                "author": "Verne, Jules",
+                "pages": 190,
+                "genre": "fiction"
+            },
+            {
+                "title": "Judge, The",
+                "author": "",
+                "pages": 170,
+                "genre": "fiction"
+            }
+        ]
+    }
+]
