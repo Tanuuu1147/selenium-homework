@@ -32,16 +32,15 @@ for user in users_list:
         "books": []
     }
 
-for book in user["books"]:
-    filtered_book = {
-        "title": book["Title"],
-        "author": book["Author"],
-        "pages": int(book["Pages"]),  # Если pages — число, приведём к int
-        "genre": book["Genre"]
+    for book in user["books"]:
+        filtered_book = {
+           "title": book["Title"],
+           "author": book["Author"],
+           "pages": int(book["Pages"]),
     }
-    filtered_user["books"].append(filtered_book)
+        filtered_user["books"].append(filtered_book)
 
-result.append(filtered_user)
+    result.append(filtered_user)
 
 with open(RESULT_FILE_PATH, "w") as f:
     json.dump(result, f, indent=4, ensure_ascii=False)
