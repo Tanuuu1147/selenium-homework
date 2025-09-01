@@ -1,4 +1,4 @@
-<?php
+
 // APPLICATION
 define('APPLICATION', 'Admin');
 

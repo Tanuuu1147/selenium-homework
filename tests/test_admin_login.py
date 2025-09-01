@@ -7,8 +7,8 @@ def test_admin_login_page(browser, base_url):
         browser.get(base_url + "/admin")
 
     # 5 обязательных и стабильных проверок
-    wait_element(browser, "#input-username")               # 1
-    wait_element(browser, "#input-password")               # 2
-    wait_element(browser, "button[type='submit']")         # 3
-    wait_element(browser, "form")                          # 4
-    assert "Administration" in browser.title               # 5
+    wait_element(browser, "#input-username")
+    wait_element(browser, "#input-password")
+    wait_element(browser, "button[type='submit']")
+    wait_element(browser, "form")
+    assert "Administration" in browser.title
