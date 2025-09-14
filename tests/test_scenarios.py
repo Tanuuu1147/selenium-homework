@@ -1,13 +1,17 @@
 import random
 import re
 import pytest
+import logging
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait, Select
-from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, NoSuchElementException, WebDriverException
 from datetime import date, datetime
 from selenium.webdriver.common.keys import Keys
+
+# Настройка логгера для отладки
+logger = logging.getLogger(__name__)
 
 # ==================== helpers ====================
 
@@ -36,8 +40,12 @@ def _get_cart_indicator_text(driver) -> str:
                 txt = (els[0].text or "").strip()
                 if txt:
                     return txt
-            except Exception:
-                pass
+            except (StaleElementReferenceException, NoSuchElementException) as e:
+                logger.warning(f"Failed to get text from cart indicator '{sel}': {e}")
+            except WebDriverException as e:
+                logger.error(f"WebDriver error getting cart indicator text: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error getting cart indicator text: {e}")
     return ""
 
 
@@ -86,9 +94,17 @@ def _wait_price_has_symbol(wait: WebDriverWait, css_scope: str, symbol: str):
                     if symbol in txt:
                         return True
                 except StaleElementReferenceException:
+                    logger.debug("Element became stale while checking price symbol")
                     return False
             return False
         except StaleElementReferenceException:
+            logger.debug("Elements became stale while finding prices")
+            return False
+        except (NoSuchElementException, WebDriverException) as e:
+            logger.warning(f"Error finding price elements: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error checking price symbols: {e}")
             return False
 
     wait.until(_probe)
@@ -96,16 +112,102 @@ def _wait_price_has_symbol(wait: WebDriverWait, css_scope: str, symbol: str):
 
 
 
-def _fill_required_options_on_product_page(driver):
+def _detect_product_type_and_requirements(driver):
     """
-    Заполняем распространённые обязательные опции товара:
-    - select: первый НЕпустой
-    - radio/checkbox: первый доступный
-    - text/textarea: 'Test'
-    - date: YYYY-MM-DD (сегодня)
-    - time: HH:MM (полдень)
-    - datetime-local: YYYY-MM-DDTHH:MM
+    Определяет тип товара на странице и возвращает информацию о требуемых полях.
+    Возвращает словарь с типом товара и списком найденных обязательных полей.
     """
+    product_info = {
+        'product_name': 'Неизвестный товар',
+        'product_url': driver.current_url,
+        'required_fields': [],
+        'product_type': 'standard'
+    }
+    
+    # Получаем название товара для логирования
+    try:
+        name_element = driver.find_element(By.CSS_SELECTOR, "h1, .product-title, [data-oc-toggle='tooltip']:first-child")
+        product_info['product_name'] = name_element.text.strip() or 'Неизвестный товар'
+    except (NoSuchElementException, StaleElementReferenceException):
+        logger.debug("Не удалось найти название товара")
+    
+    # Определяем якорные элементы для разных типов товаров
+    anchor_elements = {
+        'configurable': [
+            '.form-group.required select',
+            '.form-group.required input[type="radio"]',
+            '.form-group.required input[type="checkbox"]'
+        ],
+        'custom_fields': [
+            '.form-group.required input[type="text"]',
+            '.form-group.required textarea'
+        ],
+        'date_time': [
+            '.form-group.required input[type="date"]',
+            '.form-group.required input[type="time"]',
+            '.form-group.required input[type="datetime-local"]'
+        ]
+    }
+    
+    # Проверяем наличие различных типов полей
+    for field_type, selectors in anchor_elements.items():
+        found_elements = []
+        for selector in selectors:
+            elements = driver.find_elements(By.CSS_SELECTOR, selector)
+            if elements:
+                found_elements.extend([{selector: len(elements)}])
+        
+        if found_elements:
+            product_info['required_fields'].append({
+                'type': field_type,
+                'elements': found_elements
+            })
+    
+    # Определяем тип товара на основе найденных полей
+    if any(field['type'] == 'configurable' for field in product_info['required_fields']):
+        product_info['product_type'] = 'configurable'
+    elif any(field['type'] == 'custom_fields' for field in product_info['required_fields']):
+        product_info['product_type'] = 'custom'
+    elif any(field['type'] == 'date_time' for field in product_info['required_fields']):
+        product_info['product_type'] = 'booking'
+    
+    return product_info
+
+
+def _fill_required_options_if_has_fields(driver):
+    """
+    Адаптивно заполняет обязательные поля в зависимости от типа товара.
+    Логирует информацию о товаре и найденных полях для воспроизводимости.
+    """
+    product_info = _detect_product_type_and_requirements(driver)
+    
+    # Логируем информацию о товаре для отчета
+    logger.info(f"Тестируемый товар: '{product_info['product_name']}'")
+    logger.info(f"URL товара: {product_info['product_url']}")
+    logger.info(f"Тип товара: {product_info['product_type']}")
+    
+    if not product_info['required_fields']:
+        logger.info("На странице товара не найдено обязательных полей для заполнения")
+        return
+    
+    # Логируем найденные обязательные поля
+    for field_group in product_info['required_fields']:
+        logger.info(f"Найдены обязательные поля типа '{field_group['type']}': {field_group['elements']}")
+    
+    # Заполняем поля в зависимости от типа
+    for field_group in product_info['required_fields']:
+        field_type = field_group['type']
+        
+        if field_type == 'configurable':
+            _fill_configurable_options(driver)
+        elif field_type == 'custom_fields':
+            _fill_custom_text_fields(driver)
+        elif field_type == 'date_time':
+            _fill_date_time_fields(driver)
+
+
+def _fill_configurable_options(driver):
+    """Заполняет выпадающие списки, радиокнопки и чекбоксы."""
     # selects
     for sel in driver.find_elements(By.CSS_SELECTOR, ".form-group.required select"):
         try:
@@ -113,9 +215,14 @@ def _fill_required_options_on_product_page(driver):
             for i, opt in enumerate(s.options):
                 if (opt.get_attribute("value") or "").strip():
                     s.select_by_index(i)
+                    logger.debug(f"Выбрана опция: {opt.text}")
                     break
-        except Exception:
-            pass
+        except (NoSuchElementException, StaleElementReferenceException) as e:
+            logger.warning(f"Не удалось выбрать опцию в выпадающем списке: {e}")
+        except WebDriverException as e:
+            logger.error(f"Ошибка WebDriver при выборе опции: {e}")
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при выборе опции: {e}")
 
     # radios / checkboxes
     for css in (".form-group.required input[type='radio']",
@@ -124,27 +231,47 @@ def _fill_required_options_on_product_page(driver):
         if opts:
             try:
                 driver.execute_script("arguments[0].click();", opts[0])
-            except Exception:
-                pass
+                logger.debug(f"Выбрана опция: {css}")
+            except (NoSuchElementException, StaleElementReferenceException) as e:
+                logger.warning(f"Не удалось выбрать {css}: {e}")
+            except WebDriverException as e:
+                logger.error(f"Ошибка WebDriver при выборе {css}: {e}")
+            except Exception as e:
+                logger.error(f"Неожиданная ошибка при выборе {css}: {e}")
 
-    # text inputs / textarea
+
+def _fill_custom_text_fields(driver):
+    """Заполняет текстовые поля и текстовые области."""
     for css in (".form-group.required input[type='text']",
                 ".form-group.required textarea"):
         for el in driver.find_elements(By.CSS_SELECTOR, css):
             try:
                 el.clear()
                 el.send_keys("Test")
-            except Exception:
-                pass
+                logger.debug(f"Заполнено текстовое поле: {css}")
+            except (NoSuchElementException, StaleElementReferenceException) as e:
+                logger.warning(f"Не удалось заполнить текстовое поле: {e}")
+            except WebDriverException as e:
+                logger.error(f"Ошибка WebDriver при заполнении текстового поля: {e}")
+            except Exception as e:
+                logger.error(f"Неожиданная ошибка при заполнении текстового поля: {e}")
 
+
+def _fill_date_time_fields(driver):
+    """Заполняет поля даты и времени."""
     # date
     today = date.today().strftime("%Y-%m-%d")
     for el in driver.find_elements(By.CSS_SELECTOR, ".form-group.required input[type='date']"):
         try:
             driver.execute_script("arguments[0].value = arguments[1];", el, today)
             el.send_keys(Keys.TAB)
-        except Exception:
-            pass
+            logger.debug(f"Установлена дата: {today}")
+        except (NoSuchElementException, StaleElementReferenceException) as e:
+            logger.warning(f"Не удалось установить дату: {e}")
+        except WebDriverException as e:
+            logger.error(f"Ошибка WebDriver при установке даты: {e}")
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при установке даты: {e}")
 
     # time
     noon = "12:00"
@@ -152,8 +279,13 @@ def _fill_required_options_on_product_page(driver):
         try:
             driver.execute_script("arguments[0].value = arguments[1];", el, noon)
             el.send_keys(Keys.TAB)
-        except Exception:
-            pass
+            logger.debug(f"Установлено время: {noon}")
+        except (NoSuchElementException, StaleElementReferenceException) as e:
+            logger.warning(f"Не удалось установить время: {e}")
+        except WebDriverException as e:
+            logger.error(f"Ошибка WebDriver при установке времени: {e}")
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при установке времени: {e}")
 
     # datetime-local
     dt = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M")
@@ -161,8 +293,13 @@ def _fill_required_options_on_product_page(driver):
         try:
             driver.execute_script("arguments[0].value = arguments[1];", el, dt)
             el.send_keys(Keys.TAB)
-        except Exception:
-            pass
+            logger.debug(f"Установлена дата и время: {dt}")
+        except (NoSuchElementException, StaleElementReferenceException) as e:
+            logger.warning(f"Не удалось установить дату и время: {e}")
+        except WebDriverException as e:
+            logger.error(f"Ошибка WebDriver при установке даты и времени: {e}")
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при установке даты и времени: {e}")
 
 
 
@@ -173,35 +310,60 @@ from selenium.webdriver.common.by import By
 def _wait_add_to_cart_feedback(driver, base_count: int, timeout: int = 12):
     """Ждём подтверждение: рост счётчика, alert-success или наличие строк в мини-корзине."""
     w = WebDriverWait(driver, timeout)
-
+    
     def _ok(d):
+        # Проверяем рост счетчика корзины
         try:
-            if _get_cart_count(d) > base_count:
+            current_count = _get_cart_count(d)
+            if current_count > base_count:
+                logger.debug(f"Cart count increased from {base_count} to {current_count}")
                 return True
-        except Exception:
-            pass
+        except (NoSuchElementException, StaleElementReferenceException) as e:
+            logger.warning(f"Failed to get cart count: {e}")
+        except WebDriverException as e:
+            logger.error(f"WebDriver error while checking cart count: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error while checking cart count: {e}")
 
+        # Проверяем наличие уведомлений об успешном добавлении
         try:
             alerts = d.find_elements(By.CSS_SELECTOR, ".alert-success, #alert .alert-success, .toast")
-            if any(a.is_displayed() for a in alerts):
+            displayed_alerts = [a for a in alerts if a.is_displayed()]
+            if displayed_alerts:
+                logger.debug(f"Found {len(displayed_alerts)} success alert(s)")
                 return True
-        except Exception:
-            pass
+        except (NoSuchElementException, StaleElementReferenceException) as e:
+            logger.warning(f"Failed to check success alerts: {e}")
+        except WebDriverException as e:
+            logger.error(f"WebDriver error while checking alerts: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error while checking alerts: {e}")
 
+        # Проверяем наличие товаров в мини-корзине
         try:
-            btns = d.find_elements(By.CSS_SELECTOR, "#cart .dropdown-toggle, #cart > button, #header-cart .dropdown-toggle")
+            btns = d.find_elements(By.CSS_SELECTOR, "#cart button, #header-cart button")
             if btns:
                 d.execute_script("arguments[0].click();", btns[0])
-                rows = d.find_elements(By.CSS_SELECTOR,
-                    "#cart .table tbody tr, #header-cart .table tbody tr, .dropdown-menu .table tr, .mini-cart .table tr")
+                rows = d.find_elements(By.CSS_SELECTOR, "#cart .table tr, #header-cart .table tr")
                 if rows:
+                    logger.debug(f"Found {len(rows)} rows in cart dropdown")
                     return True
-        except Exception:
-            pass
+                else:
+                    logger.debug("Cart dropdown opened but no items found")
+        except (NoSuchElementException, StaleElementReferenceException) as e:
+            logger.warning(f"Failed to check cart dropdown: {e}")
+        except WebDriverException as e:
+            logger.error(f"WebDriver error while checking cart dropdown: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error while checking cart dropdown: {e}")
 
         return False
 
-    w.until(_ok)
+    try:
+        w.until(_ok)
+    except TimeoutException:
+        logger.error(f"Timeout waiting for cart feedback after {timeout} seconds. Base count was {base_count}")
+        raise
 
 
 # ==================== tests ====================
@@ -218,11 +380,9 @@ def test_admin_login_logout(browser, wait, base_url, admin_path, admin_creds):
     browser.find_element(By.ID, "input-password").send_keys(admin_creds["password"])
     browser.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 
-    wait.until(EC.any_of(
-        EC.visibility_of_element_located((By.ID, "menu")),
-        EC.visibility_of_element_located((By.LINK_TEXT, "Dashboard")),
-        EC.visibility_of_element_located((By.CSS_SELECTOR, ".page-header, .panel-title"))
-    ))
+    # Ждём появления главного меню админки - это самый надёжный индикатор успешного входа
+    wait.until(EC.visibility_of_element_located((By.ID, "menu")))
+    logger.debug("Успешно вошли в админ-панель - главное меню видимо")
 
     wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "a[href*='logout']"))).click()
 
@@ -253,8 +413,12 @@ def test_add_random_product_to_cart(browser, wait, base_url):
                     href = a.get_attribute("href") or ""
                     if "product_id=" in href or "route=product/product" in href:
                         hrefs.append(href)
-                except Exception:
-                    pass
+                except (StaleElementReferenceException, NoSuchElementException) as e:
+                    logger.warning(f"Failed to get href from element with selector '{sel}': {e}")
+                except WebDriverException as e:
+                    logger.error(f"WebDriver error getting href from element: {e}")
+                except Exception as e:
+                    logger.error(f"Unexpected error getting href: {e}")
         return list(dict.fromkeys(hrefs))
 
     hrefs = collect_product_hrefs("")
@@ -273,7 +437,7 @@ def test_add_random_product_to_cart(browser, wait, base_url):
 
     for product_link_href in random.sample(hrefs, k=min(3, len(hrefs))):
         browser.get(product_link_href)
-        _fill_required_options_on_product_page(browser)
+        _fill_required_options_if_has_fields(browser)
 
         add_btn = wait.until(EC.element_to_be_clickable((By.ID, "button-cart")))
         _scroll_into_view(browser, add_btn)
@@ -286,7 +450,7 @@ def test_add_random_product_to_cart(browser, wait, base_url):
             break
         except TimeoutException:
             try:
-                _fill_required_options_on_product_page(browser)
+                _fill_required_options_if_has_fields(browser)
                 _safe_click(browser, add_btn)
                 _wait_add_to_cart_feedback(browser, base_count, timeout=12)
                 success = True
