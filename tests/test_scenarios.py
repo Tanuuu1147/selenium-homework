@@ -1,17 +1,21 @@
 import random
 import re
 import pytest
+
 import logging
+
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait, Select
+
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, NoSuchElementException, WebDriverException
 from datetime import date, datetime
 from selenium.webdriver.common.keys import Keys
 
 # Настройка логгера для отладки
 logger = logging.getLogger(__name__)
+
 
 # ==================== helpers ====================
 
@@ -40,12 +44,14 @@ def _get_cart_indicator_text(driver) -> str:
                 txt = (els[0].text or "").strip()
                 if txt:
                     return txt
+
             except (StaleElementReferenceException, NoSuchElementException) as e:
                 logger.warning(f"Failed to get text from cart indicator '{sel}': {e}")
             except WebDriverException as e:
                 logger.error(f"WebDriver error getting cart indicator text: {e}")
             except Exception as e:
                 logger.error(f"Unexpected error getting cart indicator text: {e}")
+
     return ""
 
 
@@ -74,8 +80,10 @@ def _choose_currency(wait: WebDriverWait, currency_name: str):
     option = wait.until(EC.element_to_be_clickable((
         By.XPATH, f"//form[@id='form-currency']//a[contains(normalize-space(.), '{currency_name}')]"
     )))
+
     option.click()
     wait.until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "#form-currency .dropdown-menu")))
+
 
 
 def _wait_price_has_symbol(wait: WebDriverWait, css_scope: str, symbol: str):
@@ -86,6 +94,7 @@ def _wait_price_has_symbol(wait: WebDriverWait, css_scope: str, symbol: str):
                 By.CSS_SELECTOR,
                 f"{css_scope} .price, {css_scope} .product-thumb .price"
             )
+
             if not elems:
                 return False
             for e in elems:
@@ -105,9 +114,11 @@ def _wait_price_has_symbol(wait: WebDriverWait, css_scope: str, symbol: str):
             return False
         except Exception as e:
             logger.error(f"Unexpected error checking price symbols: {e}")
+
             return False
 
     wait.until(_probe)
+
 
 
 
@@ -208,10 +219,12 @@ def _fill_required_options_if_has_fields(driver):
 
 def _fill_configurable_options(driver):
     """Заполняет выпадающие списки, радиокнопки и чекбоксы."""
+
     # selects
     for sel in driver.find_elements(By.CSS_SELECTOR, ".form-group.required select"):
         try:
             s = Select(sel)
+
             for i, opt in enumerate(s.options):
                 if (opt.get_attribute("value") or "").strip():
                     s.select_by_index(i)
@@ -224,6 +237,7 @@ def _fill_configurable_options(driver):
         except Exception as e:
             logger.error(f"Неожиданная ошибка при выборе опции: {e}")
 
+
     # radios / checkboxes
     for css in (".form-group.required input[type='radio']",
                 ".form-group.required input[type='checkbox']"):
@@ -231,6 +245,7 @@ def _fill_configurable_options(driver):
         if opts:
             try:
                 driver.execute_script("arguments[0].click();", opts[0])
+
                 logger.debug(f"Выбрана опция: {css}")
             except (NoSuchElementException, StaleElementReferenceException) as e:
                 logger.warning(f"Не удалось выбрать {css}: {e}")
@@ -366,6 +381,7 @@ def _wait_add_to_cart_feedback(driver, base_count: int, timeout: int = 12):
         raise
 
 
+
 # ==================== tests ====================
 
 # 3.1 Логин–разлогин в админку
@@ -380,9 +396,11 @@ def test_admin_login_logout(browser, wait, base_url, admin_path, admin_creds):
     browser.find_element(By.ID, "input-password").send_keys(admin_creds["password"])
     browser.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 
+
     # Ждём появления главного меню админки - это самый надёжный индикатор успешного входа
     wait.until(EC.visibility_of_element_located((By.ID, "menu")))
     logger.debug("Успешно вошли в админ-панель - главное меню видимо")
+
 
     wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "a[href*='logout']"))).click()
 
@@ -393,6 +411,7 @@ def test_admin_login_logout(browser, wait, base_url, admin_path, admin_creds):
 # 3.2 Добавление случайного товара в корзину (через страницу товара)
 def test_add_random_product_to_cart(browser, wait, base_url):
     browser.get(base_url + "/")
+
     wait.until(EC.visibility_of_any_elements_located((
         By.CSS_SELECTOR,
         ".product-thumb, .product-layout, .product-grid, .product-list, .product"
@@ -459,6 +478,7 @@ def test_add_random_product_to_cart(browser, wait, base_url):
                 errors.append(f"Товар {product_link_href} не добавился: {e2}")
 
     assert success, f"Не удалось добавить товар в корзину. Детали: {errors}"
+
 
 
 # 3.3 Переключение валют на главной
