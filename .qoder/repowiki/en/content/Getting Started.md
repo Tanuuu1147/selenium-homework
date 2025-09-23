@@ -2,9 +2,10 @@
 
 <cite>
 **Referenced Files in This Document**  
-- [conftest.py](file://conftest.py)
-- [pytest.ini](file://pytest.ini)
-- [docker-compose.yml](file://docker-compose.yml)
+- [conftest.py](file://conftest.py) - *Updated in recent commit*
+- [pytest.ini](file://pytest.ini) - *Updated in recent commit*
+- [docker-compose.yml](file://docker-compose.yml) - *Added in recent commit*
+- [requirements.txt](file://requirements.txt) - *Added in recent commit*
 - [tests/test_main_page.py](file://tests/test_main_page.py)
 - [pages/base.py](file://pages/base.py)
 - [utils/waits.py](file://utils/waits.py)
@@ -37,16 +38,19 @@ Before beginning setup, ensure your system meets the following requirements:
 The test framework relies on several Python packages. Install them using `pip`:
 
 ```bash
-pip install selenium pytest
+pip install -r requirements.txt
 ```
 
-These packages are essential for:
-- **Selenium**: Browser automation and interaction with web elements
-- **Pytest**: Test discovery, execution, and reporting
+The `requirements.txt` file includes:
+- **Selenium 4.35.0**: Browser automation and interaction with web elements
+- **Pytest 8.4.1**: Test discovery, execution, and reporting
+- **Allure-Pytest 2.15.0**: Integration with Allure reporting framework
+- Additional dependencies for HTTP handling, configuration, and utilities
 
-No `requirements.txt` is present in the project, so manual installation of these core dependencies is required. Ensure versions are compatible:
-- Selenium ≥ 4.0
-- Pytest ≥ 7.0
+Ensure compatibility between Selenium and browser versions. The specified versions are tested and stable.
+
+**Section sources**  
+- [requirements.txt](file://requirements.txt)
 
 ## Configuring the Docker Environment
 The project includes a `docker-compose.yml` file that defines a complete OpenCart test environment consisting of:
@@ -119,11 +123,13 @@ The `conftest.py` file defines pytest fixtures that configure the test environme
 - **`wait` fixture**: Provides WebDriverWait instances for explicit waits
 
 Supported browsers:
-- **Chrome**: Default, with optional headless mode (`--headless`)
-- **Firefox**: Full support with window sizing
+- **Chrome**: Default, with optional headless mode (`--headless`). Includes anti-bot measures and disabled password prompts.
+- **Firefox**: Full support with window sizing and headless mode
 - **Safari**: Limited to macOS environments
 
-The fixture automatically handles driver lifecycle (setup and teardown), ensuring clean browser instances for each test.
+The fixture automatically handles driver lifecycle (setup and teardown), ensuring clean browser instances for each test. It also sets a 30-second page load timeout and 5-second implicit wait.
+
+Additionally, `conftest.py` includes a `pytest_runtest_makereport` hook that captures screenshots, current URL, page source, and browser logs on test failure, attaching them to Allure reports.
 
 **Section sources**  
 - [conftest.py](file://conftest.py#L10-L80)
@@ -174,11 +180,11 @@ Successful execution will show test results with `PASSED` status.
 ## Common Setup Pitfalls and Troubleshooting
 ### Missing WebDriver Executables
 **Issue**: `WebDriver not found` or `Service executable not found`  
-**Solution**: Ensure ChromeDriver or GeckoDriver is installed and in PATH, or use browsers with built-in driver management (Chrome, Firefox).
+**Solution**: The framework uses modern Selenium with built-in driver management for Chrome and Firefox. No manual driver installation is required.
 
 ### Browser Version Incompatibility
 **Issue**: `SessionNotCreatedException` or `Driver version mismatch`  
-**Solution**: Update browser and WebDriver to compatible versions. Consider using Dockerized browsers in CI environments.
+**Solution**: Update browser and ensure compatibility with Selenium 4.35.0. Consider using Dockerized browsers in CI environments.
 
 ### Docker Network Issues
 **Issue**: `Connection refused` or `timeout` when accessing http://localhost:8081  
@@ -205,9 +211,8 @@ export OC_ADMIN_PASS=password
 ## Expected Output Examples
 Successful test run output:
 ```
-tests/test_main_page.py::test_title PASSED
-tests/test_main_page.py::test_currency_dropdown PASSED
-================= 2 passed in 12.34s =================
+tests/test_main_page.py::test_main_page_elements PASSED
+================= 1 passed in 12.34s =================
 ```
 
 Failed test example:
@@ -220,6 +225,6 @@ E       selenium.common.exceptions.TimeoutException: Message:
 Verbose output (`-v`) shows each test case and result, while `-s` allows print statements to appear in the console.
 
 **Section sources**  
-- [conftest.py](file://conftest.py#L1-L80)
+- [conftest.py](file://conftest.py#L1-L154)
 - [pytest.ini](file://pytest.ini#L1-L5)
 - [docker-compose.yml](file://docker-compose.yml#L1-L44)

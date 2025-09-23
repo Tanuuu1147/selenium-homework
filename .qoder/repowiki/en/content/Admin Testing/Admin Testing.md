@@ -2,13 +2,22 @@
 
 <cite>
 **Referenced Files in This Document**   
-- [admin_login_page.py](file://pages/admin/admin_login_page.py)
-- [admin_dashboard_page.py](file://pages/admin/admin_dashboard_page.py)
-- [admin_products_page.py](file://pages/admin/admin_products_page.py)
-- [test_admin_products_po.py](file://tests/test_admin_products_po.py)
-- [conftest.py](file://conftest.py)
-- [login_page.py](file://pages/login_page.py)
+- [admin_login_page.py](file://pages/admin/admin_login_page.py) - *Updated implementation*
+- [admin_dashboard_page.py](file://pages/admin/admin_dashboard_page.py) - *Updated implementation*
+- [admin_products_page.py](file://pages/admin/admin_products_page.py) - *Enhanced with token management and error handling*
+- [test_admin_products_po.py](file://tests/test_admin_products_po.py) - *Updated test workflows*
+- [conftest.py](file://conftest.py) - *Updated credential handling*
+- [base.py](file://pages/base.py) - *Base page functionality*
 </cite>
+
+## Update Summary
+**Changes Made**   
+- Updated all sections to reflect enhanced implementation details discovered in code analysis
+- Added comprehensive details about token-based authentication in AdminProductsPage
+- Enhanced description of error handling and validation in product operations
+- Updated secure credential handling section with complete environment variable integration
+- Added details about overlay dismissal and robust element interaction strategies
+- Improved accuracy of locator strategies and page transition workflows
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -73,7 +82,6 @@ This implementation ensures reliable detection of the login interface before int
 
 **Section sources**
 - [admin_login_page.py](file://pages/admin/admin_login_page.py#L1-L25)
-- [login_page.py](file://pages/login_page.py#L1-L14)
 
 ## AdminDashboardPage: Post-Login Navigation
 The `AdminDashboardPage` serves as the entry point after successful login. It verifies dashboard readiness via the presence of the main navigation menu (`#menu`) and supports logout functionality through a CSS selector targeting the logout link.
@@ -88,17 +96,20 @@ This page acts as a gateway to other admin sections and enables state reset betw
 - [admin_dashboard_page.py](file://pages/admin/admin_dashboard_page.py#L1-L12)
 
 ## AdminProductsPage: Product Management Operations
-The `AdminProductsPage` enables full product lifecycle management within the admin panel. It includes specialized locators for navigating to the products section under Catalog, performing CRUD operations, and validating outcomes.
+The `AdminProductsPage` enables full product lifecycle management within the admin panel with enhanced security and reliability features. It includes specialized locators for navigating to the products section under Catalog, performing CRUD operations, and validating outcomes.
 
 Key capabilities:
-- `open_products(base_url, admin_path)`: Navigates to admin interface and clicks through Catalog → Products
-- `add_product(name, meta, model)`: Clicks Add New, fills product name, meta title, switches to Data tab, enters model, and saves
+- `_ensure_logged_in()`: Automatically handles authentication if session has expired, using environment variables `OPENCART_USERNAME` and `OPENCART_PASSWORD` as fallback credentials
+- `_get_token()`: Extracts the CSRF token from URL parameters or page links, essential for secure API operations
+- `_dismiss_overlays()`: Handles browser password prompts and modal overlays that could interfere with test execution
+- `open_products()`: Navigates to the products section using the extracted token for secure access
+- `add_product(name, meta, model)`: Clicks Add New, fills product name and meta title on General tab, switches to Data tab, enters model and price, and saves with comprehensive error handling
 - `delete_first_product()`: Selects the first product in the list via checkbox, triggers delete, confirms browser alert, and waits for success notification
 
-The use of compound CSS selectors (e.g., `a[data-original-title='Add New'], .btn-primary`) increases resilience against minor UI changes.
+The implementation includes robust error handling that collects validation errors from `.text-danger` elements and raises descriptive assertions when product creation fails validation.
 
 **Section sources**
-- [admin_products_page.py](file://pages/admin/admin_products_page.py#L1-L40)
+- [admin_products_page.py](file://pages/admin/admin_products_page.py#L1-L167)
 
 ## Test Workflows and Page Transitions
 Complex workflows involving multiple page transitions are demonstrated in `test_admin_products_po.py`. These tests follow a consistent pattern:
@@ -130,12 +141,14 @@ Locators are defined using precise and resilient strategies:
 - **Data Attributes**: Leveraged where available (e.g., `data-original-title='Add New'`)
 - **Fallback Classes**: Used in compound selectors to handle dynamic or missing attributes
 - **Dynamic Row Targeting**: Employs `:first-child` in table rows for predictable selection
+- **XPATH with normalize-space()**: Used for tab navigation to support both English and Russian interface languages
 
-Special handling is applied in `delete_first_product()` where direct DOM manipulation via `execute_script()` ensures checkbox interaction even when obscured or non-clickable via standard WebDriver methods.
+Special handling is applied in `delete_first_product()` where direct DOM manipulation via `execute_script()` ensures checkbox interaction even when obscured or non-clickable via standard WebDriver methods. The `click()` method in `BasePage` also includes automatic fallback to JavaScript clicking if standard Selenium clicking fails.
 
 **Section sources**
 - [admin_login_page.py](file://pages/admin/admin_login_page.py#L3-L24)
 - [admin_products_page.py](file://pages/admin/admin_products_page.py#L3-L39)
+- [base.py](file://pages/base.py#L30-L40)
 
 ## Secure Handling of Admin Credentials
 Admin credentials are securely managed through environment variables and pytest configuration:
@@ -149,10 +162,11 @@ parser.addoption("--admin-username", action="store", default=os.getenv("OC_ADMIN
 parser.addoption("--admin-password", action="store", default=os.getenv("OC_ADMIN_PASS", ""), help="Admin password")
 ```
 
-This approach ensures credentials are never hardcoded, supporting secure CI/CD integration and local testing without source control risks.
+Additionally, the `AdminProductsPage` class uses environment variables `OPENCART_USERNAME` and `OPENCART_PASSWORD` as fallback credentials for automated login when direct navigation occurs. This multi-layered approach ensures credentials are never hardcoded, supporting secure CI/CD integration and local testing without source control risks.
 
 **Section sources**
 - [conftest.py](file://conftest.py#L10-L15)
+- [admin_products_page.py](file://pages/admin/admin_products_page.py#L20-L25)
 
 ## Best Practices for Robust Admin Testing
 To create reliable and maintainable admin tests:
@@ -165,6 +179,9 @@ To create reliable and maintainable admin tests:
 6. **Parameterize Test Data**: Use timestamps or UUIDs to ensure uniqueness
 7. **Skip Tests Gracefully**: Use `pytest.skip()` when required credentials are missing
 8. **Leverage Fixtures**: Reuse browser, base URL, and credentials via pytest fixtures
+9. **Implement Token Management**: Handle CSRF tokens automatically for secure operations
+10. **Dismiss Overlays**: Proactively handle browser prompts and modal dialogs
+11. **Validate with Error Feedback**: Check for validation errors and provide descriptive failure messages
 
 These practices ensure tests remain stable despite UI updates and scale effectively across environments.
 
@@ -174,4 +191,4 @@ These practices ensure tests remain stable despite UI updates and scale effectiv
 - [base.py](file://pages/base.py#L1-L35)
 
 ## Conclusion
-The OpenCart admin testing framework demonstrates a well-structured approach to automating backend operations using Selenium and Page Object Model. By separating concerns across `AdminLoginPage`, `AdminDashboardPage`, and `AdminProductsPage`, it enables clear, maintainable, and secure test implementations. The integration with pytest fixtures and environment-based credential management ensures flexibility and safety across different execution contexts. Following the outlined best practices will help build robust test suites capable of handling dynamic content, permission variations, and complex multi-page workflows.
+The OpenCart admin testing framework demonstrates a well-structured approach to automating backend operations using Selenium and Page Object Model. By separating concerns across `AdminLoginPage`, `AdminDashboardPage`, and `AdminProductsPage`, it enables clear, maintainable, and secure test implementations. The integration with pytest fixtures and environment-based credential management ensures flexibility and safety across different execution contexts. Following the outlined best practices will help build robust test suites capable of handling dynamic content, permission variations, and complex multi-page workflows. The enhanced implementation with token management, overlay dismissal, and comprehensive error handling provides a solid foundation for reliable administrative interface testing.

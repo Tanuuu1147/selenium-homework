@@ -2,11 +2,22 @@
 
 <cite>
 **Referenced Files in This Document**   
-- [admin_login_page.py](file://pages/admin/admin_login_page.py)
-- [base.py](file://pages/base.py)
-- [conftest.py](file://conftest.py)
-- [test_admin_login_po.py](file://tests/test_admin_login_po.py)
+- [admin_login_page.py](file://pages/admin/admin_login_page.py) - *Updated in recent commit*
+- [base.py](file://pages/base.py) - *Updated in recent commit*
+- [conftest.py](file://conftest.py) - *Updated in recent commit*
+- [test_admin_login_po.py](file://tests/test_admin_login_po.py) - *Updated in recent commit*
+- [login_page.py](file://pages/login_page.py) - *Related component*
+- [admin_dashboard_page.py](file://pages/admin/admin_dashboard_page.py) - *Used in validation*
 </cite>
+
+## Update Summary
+**Changes Made**   
+- Updated section sources with precise file references and annotations
+- Corrected inconsistencies in element locators between `AdminLoginPage` and `LoginPage`
+- Enhanced credential management explanation with accurate fixture implementation
+- Added clarification on POM-based validation using `AdminDashboardPage`
+- Updated diagram sources to reflect actual code structure
+- Ensured all content is in English as per conversion rules
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -28,7 +39,7 @@ The `AdminLoginPage` class encapsulates the behavior and elements of the OpenCar
 The component supports opening the admin login page via a customizable URL path and verifies that the page has loaded correctly by checking both the visibility of key elements and the presence of "Administration" in the page title.
 
 **Section sources**
-- [admin_login_page.py](file://pages/admin/admin_login_page.py#L3-L24)
+- [admin_login_page.py](file://pages/admin/admin_login_page.py#L3-L24) - *Updated in recent commit*
 
 ## Element Locators and Form Interaction
 The `AdminLoginPage` defines precise locators for all critical form elements using CSS selectors:
@@ -52,7 +63,7 @@ ClickSubmit --> End([Authentication Request Sent])
 ```
 
 **Diagram sources**
-- [admin_login_page.py](file://pages/admin/admin_login_page.py#L5-L8)
+- [admin_login_page.py](file://pages/admin/admin_login_page.py#L5-L8) - *Updated in recent commit*
 
 ## Inheritance from BasePage
 The `AdminLoginPage` inherits from `BasePage`, which provides foundational methods for browser automation:
@@ -89,8 +100,8 @@ AdminLoginPage --|> BasePage : Inherits
 ```
 
 **Diagram sources**
-- [base.py](file://pages/base.py#L4-L34)
-- [admin_login_page.py](file://pages/admin/admin_login_page.py#L3-L24)
+- [base.py](file://pages/base.py#L7-L43) - *Updated in recent commit*
+- [admin_login_page.py](file://pages/admin/admin_login_page.py#L3-L24) - *Updated in recent commit*
 
 ## Credential Management via Fixtures
 Credentials for admin login are securely managed through pytest fixtures defined in `conftest.py`. The `admin_creds` fixture retrieves credentials either from command-line arguments or environment variables (`OC_ADMIN_USER`, `OC_ADMIN_PASS`). This approach decouples sensitive data from the test code and allows flexible configuration across environments.
@@ -110,17 +121,18 @@ Test->>AdminLoginPage : Call login(user, password)
 ```
 
 **Diagram sources**
-- [conftest.py](file://conftest.py#L50-L57)
+- [conftest.py](file://conftest.py#L40-L44) - *Updated in recent commit*
 
 ## POM-Based Login Validation and Error Handling
-The test file `test_admin_login_po.py` demonstrates how the Page Object Model is used to validate successful login and handle errors. It uses the `LoginPage` (which shares the same locators as `AdminLoginPage`) to perform login actions and verify that the `AdminDashboardPage` opens correctly.
+The test file `test_admin_login_po.py` demonstrates how the Page Object Model is used to validate successful login and handle errors. It uses the `LoginPage` (which shares similar locators with `AdminLoginPage`) to perform login actions and verify that the `AdminDashboardPage` opens correctly.
 
 If credentials are missing, the test gracefully skips execution using `pytest.skip()`, preventing false failures due to misconfiguration. After login, it validates dashboard visibility and performs logout, then confirms the return to the login form by waiting for username and password fields.
 
 This pattern ensures that login logic is tested in isolation while maintaining clear separation between test logic and page behavior.
 
 **Section sources**
-- [test_admin_login_po.py](file://tests/test_admin_login_po.py#L7-L19)
+- [test_admin_login_po.py](file://tests/test_admin_login_po.py#L7-L19) - *Updated in recent commit*
+- [admin_dashboard_page.py](file://pages/admin/admin_dashboard_page.py#L3-L12) - *Used in validation*
 
 ## Best Practices for Reliable Login Testing
 To ensure reliable login testing, the following best practices are implemented:
@@ -145,7 +157,7 @@ Several common issues arise during admin login testing:
 The `click()` method in `BasePage` includes a JavaScript fallback to scroll elements into view and trigger clicks programmatically, effectively bypassing visibility obstructions.
 
 **Section sources**
-- [base.py](file://pages/base.py#L28-L34)
+- [base.py](file://pages/base.py#L28-L34) - *Updated in recent commit*
 
 ## Conclusion
 The `AdminLoginPage` component exemplifies effective use of the Page Object Model in Selenium-based testing. By combining inheritance, explicit waits, secure credential management, and robust error handling, it enables reliable and maintainable admin login tests. The integration with pytest fixtures allows flexible configuration, while the separation of concerns between page logic and test logic enhances readability and scalability. Following these patterns ensures stable automation of critical authentication workflows in OpenCart.

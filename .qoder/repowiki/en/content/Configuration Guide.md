@@ -2,13 +2,20 @@
 
 <cite>
 **Referenced Files in This Document**   
-- [conftest.py](file://conftest.py)
-- [pytest.ini](file://pytest.ini)
+- [conftest.py](file://conftest.py) - *Updated in recent commits*
+- [opencart_data/administration/config.php](file://opencart_data/administration/config.php) - *Modified in commit 792f1527*
+- [opencart_data/config.php](file://opencart_data/config.php) - *Added in commit 93ce200d*
 - [pages/admin/admin_login_page.py](file://pages/admin/admin_login_page.py)
-- [pages/login_page.py](file://pages/login_page.py)
 - [tests/test_admin_login_po.py](file://tests/test_admin_login_po.py)
-- [utils/waits.py](file://utils/waits.py)
 </cite>
+
+## Update Summary
+**Changes Made**   
+- Updated configuration defaults to reflect actual values used in OpenCart environment
+- Added references to OpenCart configuration files that define base URL and admin path
+- Corrected window size settings based on actual implementation
+- Updated implicit wait value from 2 to 5 seconds as per code
+- Enhanced examples with realistic local development URLs from config files
 
 ## Table of Contents
 1. [CLI Configuration Options](#cli-configuration-options)
@@ -89,19 +96,21 @@ These examples demonstrate how the same test suite can be executed across differ
 **Section sources**
 - [conftest.py](file://conftest.py#L5-L24)
 - [tests/test_admin_login_po.py](file://tests/test_admin_login_po.py#L5-L19)
+- [opencart_data/administration/config.php](file://opencart_data/administration/config.php)
+- [opencart_data/config.php](file://opencart_data/config.php)
 
 ## Customizing Browser and Timeout Settings
 
 The framework configures browser behavior and timeout settings programmatically within the `browser` fixture in `conftest.py`.
 
 ### Window Size
-- Chrome: Set via `--window-size=1280,900` argument.
-- Firefox: Applied using `driver.set_window_size(1280, 900)` after initialization.
+- Chrome: Set via `--window-size=1920,1080` argument.
+- Firefox: Applied using `driver.set_window_size(1920, 1080)` after initialization.
 - Safari: Uses default window size (no customization implemented).
 
 ### Timeouts
 - **Page Load Timeout**: Set to 30 seconds using `driver.set_page_load_timeout(30)`.
-- **Implicit Wait**: Set to 2 seconds using `driver.implicitly_wait(2)`, enabling dynamic element discovery.
+- **Implicit Wait**: Set to 5 seconds using `driver.implicitly_wait(5)`, enabling dynamic element discovery.
 - **Explicit Wait**: A separate `wait` fixture provides a `WebDriverWait` instance with a 10-second timeout, intended for conditional waits on specific elements.
 
 Headless mode is enabled conditionally based on the `--headless` flag:
@@ -129,7 +138,6 @@ RunTests --> QuitDriver["driver.quit()"]
 
 **Section sources**
 - [conftest.py](file://conftest.py#L45-L78)
-- [utils/waits.py](file://utils/waits.py#L5-L10)
 
 ## Configuration Injection via Pytest Fixtures
 

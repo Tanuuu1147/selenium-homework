@@ -1,0 +1,2 @@
+{'level': 'SEVERE', 'message': 'http://localhost:8081/favicon.ico - Failed to load resource: the server responded with a status of 404 (Not Found)', 'source': 'network', 'timestamp': 1758630696887}
+{'level': 'SEVERE', 'message': 'http://localhost:8081/administration/view/javascript/ckeditor/ckeditor.js 364:383 "This CKEditor 4.22.1 version is not secure. Consider upgrading to the latest one, 4.25.1-lts: https://ckeditor.com/ckeditor-4-support/"', 'source': 'console-api', 'timestamp': 1758630714581}
