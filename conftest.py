@@ -1,57 +1,81 @@
-# conftest.py
+import os
 import pytest
+import logging
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.firefox.service import Service as FirefoxService
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.support.ui import WebDriverWait
+
 
 def pytest_addoption(parser):
-    parser.addoption("--executor", default="selenoid")  # local | selenoid
-    parser.addoption("--browser", default="chrome")
-    parser.addoption("--browser-version", default="124.0")
-    parser.addoption("--selenoid", default="http://127.0.0.1:4444/wd/hub")
-    parser.addoption("--timeout", type=int, default=120)
+    parser.addoption("--browser", action="store", default="chrome",
+                     help="chrome | firefox | safari")
+    parser.addoption("--base-url", action="store", default="https://demo.opencart.com",
+                     help="Base URL of OpenCart")
+    parser.addoption("--admin-path", action="store", default="/administration",
+                     help="Path to admin login page (/administration или /admin)")
+    parser.addoption("--admin-username", action="store", default=os.getenv("OC_ADMIN_USER", ""),
+                     help="Admin username")
+    parser.addoption("--admin-password", action="store", default=os.getenv("OC_ADMIN_PASS", ""),
+                     help="Admin password")
+    parser.addoption("--headless", action="store_true", default=False,
+                     help="Run browser in headless mode")
+
+
+@pytest.fixture(scope="session")
+def base_url(request):
+    return request.config.getoption("--base-url").rstrip("/")
+
+
+@pytest.fixture(scope="session")
+def admin_path(request):
+    path = request.config.getoption("--admin-path")
+    return path if path.startswith("/") else "/" + path
+
+
+@pytest.fixture(scope="session")
+def admin_creds(request):
+    return {
+        "user": request.config.getoption("--admin-username"),
+        "password": request.config.getoption("--admin-password"),
+    }
+
 
 @pytest.fixture
-def driver(request):
-    executor = request.config.getoption("--executor")
-    browser = request.config.getoption("--browser").lower()
-    version = request.config.getoption("--browser-version")
-    selenoid_url = request.config.getoption("--selenoid")
-    timeout = request.config.getoption("--timeout")
+def browser(request):
+    """Фикстура для запуска браузера"""
+    name = request.config.getoption("--browser").lower()
+    headless = request.config.getoption("--headless")
 
-    # --- локально ---
-    if executor == "local":
-        if browser == "chrome":
-            drv = webdriver.Chrome()
-        elif browser == "firefox":
-            drv = webdriver.Firefox()
-        else:
-            raise RuntimeError(f"Unsupported local browser: {browser}")
-        yield drv
-        drv.quit()
-        return
+    if name == "chrome":
+        options = ChromeOptions()
+        if headless:
+            options.add_argument("--headless=new")
+        options.add_argument("--window-size=1280,900")
+        driver = webdriver.Chrome(service=ChromeService(), options=options)
 
-    # --- удалённо (Selenoid) ---
-    if browser == "chrome":
-        options = webdriver.ChromeOptions()
-        # важно для контейнеров
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-    elif browser == "firefox":
-        options = webdriver.FirefoxOptions()
+    elif name == "firefox":
+        options = FirefoxOptions()
+        if headless:
+            options.add_argument("-headless")
+        driver = webdriver.Firefox(service=FirefoxService(), options=options)
+        driver.set_window_size(1280, 900)
+
+    elif name == "safari":
+        driver = webdriver.Safari()
+
     else:
-        raise RuntimeError(f"Unsupported remote browser: {browser}")
+        raise pytest.UsageError(f"Unknown --browser={name}")
 
-    options.set_capability("browserName", browser)
-    options.set_capability("browserVersion", version)
-    options.set_capability("platformName", "linux")
-    options.set_capability(
-        "selenoid:options",
-        {
-            "enableVNC": True,
-            "enableVideo": False,
-            "sessionTimeout": f"{timeout}s",
-        },
-    )
+    driver.set_page_load_timeout(30)
+    driver.implicitly_wait(2)
+    yield driver
+    driver.quit()
 
-    drv = webdriver.Remote(command_executor=selenoid_url, options=options)
-    yield drv
-    drv.quit()
+
+@pytest.fixture
+def wait(browser):
+    """Явные ожидания по умолчанию"""
+    return WebDriverWait(browser, 10)

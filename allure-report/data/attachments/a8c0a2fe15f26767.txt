@@ -1,0 +1,9 @@
+[32mINFO    [0m conftest:conftest.py:42 Используется базовый URL: https://demo.opencart.com
+[32mINFO    [0m conftest:conftest.py:69 Инициализация браузера: chrome, headless: False
+[32mINFO    [0m conftest:conftest.py:116 Браузер chrome успешно инициализирован
+[32mINFO    [0m test_logging_example:test_logging_example.py:15 === Начало теста логирования ===
+[32mINFO    [0m test_logging_example:test_logging_example.py:18 Открытие главной страницы: https://demo.opencart.com
+[32mINFO    [0m pages.base:base.py:20 Открытие страницы: https://demo.opencart.com
+[32mINFO    [0m pages.base:base.py:23 Страница успешно открыта: https://demo.opencart.com
+[32mINFO    [0m test_logging_example:test_logging_example.py:24 Заголовок страницы: Один момент…
+[32mINFO    [0m conftest:conftest.py:119 Закрытие браузера chrome
