@@ -1,0 +1,3 @@
+{'level': 'SEVERE', 'message': 'https://demo.opencart.com/ - Failed to load resource: the server responded with a status of 403 ()', 'source': 'network', 'timestamp': 1758645741911}
+{'level': 'SEVERE', 'message': 'https://demo.opencart.com/favicon.ico - Failed to load resource: the server responded with a status of 403 ()', 'source': 'network', 'timestamp': 1758645742148}
+{'level': 'SEVERE', 'message': 'violation - Potential permissions policy violation: autoplay is not allowed in this document.', 'source': 'violation', 'timestamp': 1758645742987}

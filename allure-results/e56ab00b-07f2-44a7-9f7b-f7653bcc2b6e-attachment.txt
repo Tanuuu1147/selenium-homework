@@ -1,0 +1,1 @@
+http://localhost:8081/administration/index.php?route=catalog/product.form&user_token=53ab6a6cc9a08ab9c012e8231bbb3ba8
