@@ -1,0 +1,35 @@
+# Директории с результатами тестов
+allure-results/
+allure-report/
+
+# Кеш Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Виртуальные окружения
+venv/
+env/
+ENV/
+
+# IDE файлы
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker файлы
+Dockerfile
+.dockerignore
+
+# Прочие временные файлы
+.DS_Store
+*.tmp
+*.log
