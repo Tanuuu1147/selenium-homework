@@ -1,0 +1,22 @@
+{
+  "chrome": {
+    "default": "124.0",
+    "versions": {
+      "126.0": {
+        "image": "selenoid/chrome:124.0",
+        "port": "4444",
+        "path": "/wd/hub"
+      }
+    }
+  },
+  "firefox": {
+    "default": "124.0",
+    "versions": {
+      "126.0": {
+        "image": "selenoid/firefox:126.0",
+        "port": "4444",
+        "path": "/wd/hub"
+      }
+    }
+  }
+}
