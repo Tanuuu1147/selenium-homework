@@ -13,3 +13,4 @@ class LoginPage(BasePage):
         self.type(self.USERNAME, user)
         self.type(self.PASSWORD, password)
         self.click(self.SUBMIT)
+        return self

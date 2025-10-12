@@ -2,13 +2,21 @@
 
 <cite>
 **Referenced Files in This Document**   
-- [admin_products_page.py](file://pages/admin/admin_products_page.py)
-- [test_admin_products_po.py](file://tests/test_admin_products_po.py)
-- [base.py](file://pages/base.py)
-- [utils/waits.py](file://utils/waits.py)
-- [admin_login_page.py](file://pages/admin/admin_login_page.py)
-- [admin_dashboard_page.py](file://pages/admin/admin_dashboard_page.py)
+- [admin_products_page.py](file://pages/admin/admin_products_page.py) - *Updated in recent commit*
+- [test_admin_products_po.py](file://tests/test_admin_products_po.py) - *Updated in recent commit*
+- [base.py](file://pages/base.py) - *Used for base functionality*
+- [utils/waits.py](file://utils/waits.py) - *Used for wait utilities*
+- [admin_login_page.py](file://pages/admin/admin_login_page.py) - *Used for login workflow*
+- [admin_dashboard_page.py](file://pages/admin/admin_dashboard_page.py) - *Used for dashboard verification*
 </cite>
+
+## Update Summary
+**Changes Made**   
+- Updated **Core Operations** section to include the new `price` field in product creation
+- Added **PRICE_INPUT** to **Dynamic Selectors and UI Elements** table
+- Updated **Test Workflow Implementation** to reflect the new `price` parameter in `add_product()`
+- Enhanced **Best Practices for Data Management** with improved error handling details
+- Added internal helper methods to **Dynamic Selectors and UI Elements** for comprehensive coverage
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -31,12 +39,15 @@ This document details the structure, functionality, and usage patterns of the Ad
 ## Core Operations
 
 ### Adding a New Product
-The `add_product()` method facilitates the creation of new products by programmatically filling essential fields including name, model, and SEO metadata. It navigates through the product creation form, inputs provided values, and submits the form via the Save button. The method returns a visibility-waited success alert element, confirming successful persistence.
+The `add_product()` method facilitates the creation of new products by programmatically filling essential fields including name, model, price, and SEO metadata. It navigates through the product creation form, inputs provided values, and submits the form via the Save button. The method returns a visibility-waited success alert element, confirming successful persistence.
 
 Key fields:
 - **Name**: Entered into `#input-name1`
 - **Meta Title**: Entered into `#input-meta-title1`
 - **Model**: Entered under the Data tab using `#input-model`
+- **Price**: Entered under the Data tab using `#input-price`
+
+The method now includes a `price` parameter with a default value of "100", making it a required field in product creation.
 
 ### Deleting a Product
 The `delete_first_product()` method performs bulk deletion of the first product listed in the table. It selects the checkbox in the first row using a precise CSS selector, triggers the Delete action, and handles the browser’s native JavaScript alert dialog. After confirmation, it waits for the success notification to appear.
@@ -53,12 +64,14 @@ The AdminProductsPage uses stable, semantic CSS and attribute-based selectors to
 
 | Element | Selector | Purpose |
 |--------|---------|--------|
-| "Add New" Button | `a[data-original-title='Add New'], .btn-primary` | Triggers product creation form |
-| "Delete" Button | `button[data-original-title='Delete'], .btn-danger` | Initiates bulk delete action |
-| Success Alert | `.alert-success` | Confirms operation success |
+| "Add New" Button | `a[onclick*='add'], a[title='Add New'], a[data-original-title='Add New']` | Triggers product creation form |
+| "Delete" Button | `button[form*='form-product'].btn-danger, button[title='Delete'], button[data-original-title='Delete']` | Initiates bulk delete action |
+| Success Alert | `.alert-success, .alert.alert-success` | Confirms operation success |
 | Product Table Checkbox | `table tbody tr:first-child input[type='checkbox']` | Selects first product for deletion |
-| Name Input | `#input-name1` | Primary product name field |
-| Model Input | `#input-model` | Internal product model identifier |
+| Name Input | `input#input-name-1, input#input-name1, input[name$='[name]']` | Primary product name field |
+| Model Input | `input#input-model, input[name='model']` | Internal product model identifier |
+| Price Input | `input#input-price, input[name='price']` | Product price field |
+| Meta Title Input | `input#input-meta-title-1, input#input-meta-title1, input[name$='[meta_title]']` | SEO metadata field |
 
 These selectors are resilient to minor DOM changes and prioritize semantic attributes like `data-original-title`, which are less likely to change than class names.
 
@@ -68,6 +81,7 @@ A["Add Button (data-original-title='Add New')"] --> B["Product Form"]
 C["Delete Button (data-original-title='Delete')"] --> D["Confirm Alert Dialog"]
 E["Table Row Checkbox"] --> C
 F["Input Fields (ID-based)"] --> B
+G["Price Input"] --> B
 ```
 
 **Diagram sources**
@@ -81,10 +95,12 @@ The page interacts with two types of modals:
 
 In `delete_first_product()`, after clicking the Delete button, the script switches to the active alert and accepts it:
 ```python
-alert = self.driver.switch_to.alert
-alert.accept()
+try:
+    self.driver.switch_to.alert.accept()
+except Exception:
+    pass
 ```
-This pattern ensures that the confirmation is programmatically dismissed, allowing the test to proceed.
+This pattern ensures that the confirmation is programmatically dismissed, allowing the test to proceed. The try-except block provides resilience against cases where the alert might not appear.
 
 **Section sources**
 - [admin_products_page.py](file://pages/admin/admin_products_page.py#L34-L39)
@@ -98,7 +114,7 @@ The `test_admin_products_po.py` file demonstrates a complete end-to-end workflow
 2. Logs in via `LoginPage.open_admin().login()`
 3. Verifies dashboard access via `AdminDashboardPage.is_opened()`
 4. Navigates to Products via `AdminProductsPage.open_products()`
-5. Adds a uniquely named product using timestamp suffix
+5. Adds a uniquely named product using timestamp suffix with name, meta, model, and price parameters
 6. Validates presence of "Success" text in the alert
 
 ### Test: Delete First Product
@@ -121,7 +137,7 @@ Test->>Dashboard : is_opened()
 Dashboard-->>Test : Verified
 Test->>Products : open_products()
 Products-->>Test : Page loaded
-Test->>Products : add_product(name, meta, model)
+Test->>Products : add_product(name, meta, model, price)
 Products->>Browser : Fill form & Save
 Browser-->>Products : Show success alert
 Products-->>Test : Alert element
@@ -174,11 +190,12 @@ OpenCart enforces uniqueness on product names and models. To avoid constraint vi
 - Implement cleanup via `delete_product_by_name()` if needed
 
 ### Error Resilience
-The `click()` method in `BasePage` includes a fallback scroll-and-execute_script mechanism to handle cases where elements are not clickable due to viewport clipping.
+The `add_product()` method now includes comprehensive validation by checking for `.text-danger` elements and raising detailed `AssertionError` messages when validation fails. The `click()` method in `BasePage` includes a fallback scroll-and-execute_script mechanism to handle cases where elements are not clickable due to viewport clipping.
 
 **Section sources**
 - [test_admin_products_po.py](file://tests/test_admin_products_po.py#L16-L17)
 - [base.py](file://pages/base.py#L27-L35)
+- [admin_products_page.py](file://pages/admin/admin_products_page.py#L140-L155)
 
 ## Conclusion
 The AdminProductsPage provides a clean, maintainable interface for automating product management tasks in OpenCart. Its design emphasizes resilience through robust selectors, proper wait strategies, and separation of concerns via the Page Object Model. When combined with dynamic data generation and proper cleanup, it enables reliable, repeatable testing of critical inventory operations.

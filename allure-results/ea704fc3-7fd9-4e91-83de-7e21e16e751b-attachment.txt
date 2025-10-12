@@ -1,0 +1,25 @@
+[32mINFO    [0m conftest:conftest.py:42 Используется базовый URL: https://demo.opencart.com
+[32mINFO    [0m conftest:conftest.py:69 Инициализация браузера: chrome, headless: False
+[32mINFO    [0m conftest:conftest.py:115 Браузер chrome успешно инициализирован
+[32mINFO    [0m pages.base:base.py:19 Открытие страницы: https://demo.opencart.com
+[32mINFO    [0m pages.base:base.py:22 Страница успешно открыта: https://demo.opencart.com
+[32mINFO    [0m pages.base:base.py:30 Ожидание видимости элемента: ('css selector', '#logo'), таймаут: 10с
+[31m[1mERROR   [0m pages.base:base.py:38 Элемент не стал видимым за 10с: ('css selector', '#logo'). Ошибка: Message: 
+Stacktrace:
+0   chromedriver                        0x0000000100d47418 cxxbridge1$str$ptr + 2882044
+1   chromedriver                        0x0000000100d3f3b4 cxxbridge1$str$ptr + 2849176
+2   chromedriver                        0x0000000100869050 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 73436
+3   chromedriver                        0x00000001008b0410 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 365212
+4   chromedriver                        0x00000001008f1604 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 631952
+5   chromedriver                        0x00000001008a40d0 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 315228
+6   chromedriver                        0x0000000100d0bb08 cxxbridge1$str$ptr + 2638060
+7   chromedriver                        0x0000000100d0ed20 cxxbridge1$str$ptr + 2650884
+8   chromedriver                        0x0000000100cece58 cxxbridge1$str$ptr + 2511932
+9   chromedriver                        0x0000000100d0f5cc cxxbridge1$str$ptr + 2653104
+10  chromedriver                        0x0000000100cde59c cxxbridge1$str$ptr + 2452352
+11  chromedriver                        0x0000000100d2e9f0 cxxbridge1$str$ptr + 2781140
+12  chromedriver                        0x0000000100d2eb70 cxxbridge1$str$ptr + 2781524
+13  chromedriver                        0x0000000100d3f000 cxxbridge1$str$ptr + 2848228
+14  libsystem_pthread.dylib             0x0000000186a26f94 _pthread_start + 136
+15  libsystem_pthread.dylib             0x0000000186a21d34 thread_start + 8
+[32mINFO    [0m conftest:conftest.py:118 Закрытие браузера chrome
