@@ -18,7 +18,16 @@ class BasePage:
     def open(self, url):
         logger.info(f"Открытие страницы: {url}")
         try:
-            self.driver.get(url)
+            # Для локальных файлов используем прямую навигацию
+            if url.startswith("file://"):
+                self.driver.get(url)
+            else:
+                # Для веб-страниц проверяем base_url
+                if self.base_url and not url.startswith("http"):
+                    full_url = f"{self.base_url.rstrip('/')}/{url.lstrip('/')}"
+                else:
+                    full_url = url
+                self.driver.get(full_url)
             logger.info(f"Страница успешно открыта: {url}")
         except Exception as e:
             logger.error(f"Ошибка при открытии страницы {url}: {str(e)}")

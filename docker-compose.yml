@@ -1,4 +1,27 @@
 services:
+  selenoid:
+    image: aerokube/selenoid:latest
+    ports:
+      - "4444:4444"
+    volumes:
+      - "./selenoid:/etc/selenoid"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./selenoid/video:/opt/selenoid/video"
+    environment:
+      - OVERRIDE_VIDEO_OUTPUT_DIR=$PWD/selenoid/video
+    command: ["-conf", "/etc/selenoid/browsers.json", "-video-output-dir", "/opt/selenoid/video", "-container-network", "selenium-homework_default"]
+    networks:
+      - default
+
+  selenoid-ui:
+    image: aerokube/selenoid-ui:latest
+    ports:
+      - "8080:8080"
+    command: ["--selenoid-uri=http://selenoid:4444"]
+    depends_on:
+      - selenoid
+    networks:
+      - default
 
   phpadmin:
     image: phpmyadmin/phpmyadmin:latest
@@ -8,30 +31,35 @@ services:
       PMA_PORT: 3306
       PMA_USER: bn_opencart
     ports:
-      - "8082:80"
+      - "${PHPADMIN_PORT:-8082}:80"
+    networks:
+      - default
 
   mariadb:
-    image: bitnami/mariadb:11.2
+    image: mariadb:11.2
     platform: linux/amd64
     environment:
-      ALLOW_EMPTY_PASSWORD: "yes"
-      MARIADB_USER: bn_opencart
-      MARIADB_DATABASE: bitnami_opencart
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: bn_opencart
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: bitnami_opencart
     ports:
       - "3306:3306"
+    networks:
+      - default
 
   opencart:
     image: agridyaev/opencart:4.0.2-3-debian-12-r33
     platform: linux/amd64
     environment:
-      OPENCART_HOST: "localhost:8081"
+      OPENCART_HOST: "${LOCAL_IP:-localhost}:${OPENCART_PORT:-8081}"
       OPENCART_DATABASE_HOST: mariadb
       OPENCART_DATABASE_PORT_NUMBER: 3306
       OPENCART_DATABASE_USER: bn_opencart
+      OPENCART_DATABASE_PASSWORD: password
       OPENCART_DATABASE_NAME: bitnami_opencart
-      ALLOW_EMPTY_PASSWORD: "yes"
     ports:
-      - "8081:8080"
+      - "${OPENCART_PORT:-8081}:8080"
       - "8443:8443"
     depends_on:
       - mariadb
@@ -39,6 +67,23 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 10
+    networks:
+      - default
 
+  tests:
+    build: .
+    environment:
+      - OPENCART_URL=http://${LOCAL_IP:-host.docker.internal}:${OPENCART_PORT:-8081}
+    command: -v tests/ --base-url http://opencart:8080 --browser chrome --executor http://selenoid:4444/wd/hub
+    depends_on:
+      opencart:
+        condition: service_healthy
+      selenoid:
+        condition: service_started
+    networks:
+      - default
 
+networks:
+  default:
+    driver: bridge

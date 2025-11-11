@@ -7,6 +7,9 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.remote.webdriver import WebDriver
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
 
 
 def pytest_addoption(parser):
@@ -22,6 +25,8 @@ def pytest_addoption(parser):
                      help="Admin password")
     parser.addoption("--headless", action="store_true", default=False,
                      help="Run browser in headless mode")
+    parser.addoption("--executor", action="store", default="",
+                     help="Selenium Grid executor URL")
 
 
 @pytest.fixture(scope="session")
@@ -48,26 +53,41 @@ def browser(request):
     """Фикстура для запуска браузера"""
     name = request.config.getoption("--browser").lower()
     headless = request.config.getoption("--headless")
+    executor = request.config.getoption("--executor")
 
-    if name == "chrome":
-        options = ChromeOptions()
+    if executor:
+        # Используем Selenium Grid
+        options = ChromeOptions() if name == "chrome" else FirefoxOptions()
         if headless:
             options.add_argument("--headless=new")
-        options.add_argument("--window-size=1280,900")
-        driver = webdriver.Chrome(service=ChromeService(), options=options)
-
-    elif name == "firefox":
-        options = FirefoxOptions()
-        if headless:
-            options.add_argument("-headless")
-        driver = webdriver.Firefox(service=FirefoxService(), options=options)
-        driver.set_window_size(1280, 900)
-
-    elif name == "safari":
-        driver = webdriver.Safari()
-
+        
+        driver = webdriver.Remote(
+            command_executor=executor,
+            options=options
+        )
     else:
-        raise pytest.UsageError(f"Unknown --browser={name}")
+        # Локальный запуск браузера с автоматическим управлением драйверами
+        if name == "chrome":
+            options = ChromeOptions()
+            if headless:
+                options.add_argument("--headless=new")
+            options.add_argument("--window-size=1280,900")
+            service = ChromeService(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
+
+        elif name == "firefox":
+            options = FirefoxOptions()
+            if headless:
+                options.add_argument("-headless")
+            service = FirefoxService(GeckoDriverManager().install())
+            driver = webdriver.Firefox(service=service, options=options)
+            driver.set_window_size(1280, 900)
+
+        elif name == "safari":
+            driver = webdriver.Safari()
+
+        else:
+            raise pytest.UsageError(f"Unknown --browser={name}")
 
     driver.set_page_load_timeout(30)
     driver.implicitly_wait(2)
